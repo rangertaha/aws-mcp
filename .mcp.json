@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "aws": {
+      "command": "go",
+      "args": ["run", "./cmd/aws", "mcp"]
+    }
+  }
+}
