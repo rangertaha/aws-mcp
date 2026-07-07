@@ -1,5 +1,5 @@
 site_name: aws-mcp
-site_description: An MCP server exposing aws headlines and search as tools an LLM client can call.
+site_description: An MCP server exposing AWS services as tools an LLM client can call.
 site_url: https://rangertaha.github.io/aws-mcp/
 repo_url: https://github.com/rangertaha/aws-mcp
 repo_name: rangertaha/aws-mcp
@@ -49,3 +49,5 @@ nav:
   - Home: index.md
   - Install: install.md
   - Configuration: configuration.md
+  - Architecture: architecture.md
+  - Services: services.md

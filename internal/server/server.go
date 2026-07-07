@@ -128,6 +128,20 @@ func Register[In, Out any](s *Server, def ToolDef, h mcp.ToolHandlerFor[In, Out]
 	s.registered++
 }
 
+// rawMessageType is encoding/json.RawMessage, a []byte. Left to the default
+// inference it schemas as an array of 0-255 integers (a byte array), when a
+// RawMessage field actually holds arbitrary embedded JSON; schemaOptions
+// overrides it to an unconstrained schema ("accept any JSON value") instead.
+var rawMessageType = reflect.TypeFor[json.RawMessage]()
+
+// schemaOptions is shared by every Register call so every json.RawMessage
+// field anywhere in a tool's In/Out struct gets the same override.
+var schemaOptions = &jsonschema.ForOptions{
+	TypeSchemas: map[reflect.Type]*jsonschema.Schema{
+		rawMessageType: {},
+	},
+}
+
 // normalizedSchema generates the JSON schema for t (dereferencing pointers) and
 // rewrites any boolean subschemas into their object equivalent. It returns nil
 // on any error, signaling the caller to fall back to the SDK's own generation.
@@ -135,7 +149,7 @@ func normalizedSchema(t reflect.Type) json.RawMessage {
 	for t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
-	s, err := jsonschema.ForType(t, &jsonschema.ForOptions{})
+	s, err := jsonschema.ForType(t, schemaOptions)
 	if err != nil {
 		return nil
 	}
