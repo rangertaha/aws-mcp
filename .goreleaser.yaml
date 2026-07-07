@@ -30,7 +30,9 @@ builds:
 archives:
   - id: default
     formats: [tar.gz]
-    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    # No version segment: keeps releases/latest/download/... links stable
+    # across releases (see ado-mcp's changelog for why this matters).
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
     # Windows users expect zips.
     format_overrides:
       - goos: windows

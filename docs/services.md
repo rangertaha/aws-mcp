@@ -2,9 +2,22 @@
 
 Every service listed here is registered in `internal/gen/services/services.json` and discovered automatically via reflection (see [Architecture](architecture.md)) — nothing below is hand-written. Regenerate this exact data at any time with the `aws_list_services`/`aws_list_operations` tools, or locally via `go test ./internal/awsx/registry/...`.
 
-**425 services, 18,765 operations, 18,035 (96.1%) dispatchable** through `aws_invoke`. *Unsupported* operations (730 total) have a shape generic JSON dispatch can'''t safely handle — a streaming body, an open-content "document" field, or a union/polymorphic type — most commonly in `s3` (object bodies), `dynamodb` (`AttributeValue`), and a handful of newer/preview services. They still appear in `aws_list_operations`/`aws_describe_operation` for visibility; only `aws_invoke` refuses them.
+**425 services, 18,765 operations, 18,035 (96.1%) dispatchable** through `aws_invoke`. *Unsupported* operations (730 total) have a shape generic JSON dispatch can't safely handle — a streaming body, an open-content "document" field, or a union/polymorphic type — most commonly in `s3` (object bodies), `dynamodb` (`AttributeValue`), and a handful of newer/preview services. They still appear in `aws_list_operations`/`aws_describe_operation` for visibility; only `aws_invoke` refuses them.
 
 To narrow the server to a subset, set `AWS_TOOLSETS` to a comma-separated list of the service names below (see [Configuration](configuration.md)).
+
+## Adding a service
+
+1. Add `"<name>": "github.com/aws/aws-sdk-go-v2/service/<name>"` to
+   `internal/gen/services/services.json`.
+2. Run `make generate` (regenerates `internal/awsx/registry/zz_generated_clients.go`).
+3. `go mod tidy` to pick up the new SDK module.
+
+No Go code to write — the new service's operations, schemas, and read-only classification are all derived automatically the next time the catalog is built.
+
+See [Architecture](architecture.md) for how discovery and dispatch actually work.
+
+## Full list
 
 | Service | Operations | Unsupported |
 | --- | ---: | ---: |

@@ -34,3 +34,7 @@ For Claude Code: `claude mcp add aws -- aws mcp` (add `--env AWS_PROFILE=...` if
 ## Local development
 
 The repo ships a committed [`.mcp.json`](.mcp.json) that runs the server straight from source (`go run ./cmd/aws mcp`), so changes take effect on the next session without a build step. Run `cp .env.example .env` and fill it in (or just rely on your existing `~/.aws` credentials) before launching Claude Code in this directory.
+
+## Next: the CLI
+
+With credentials in place, see the [CLI](cli.md) reference for `aws test` (verify the connection).

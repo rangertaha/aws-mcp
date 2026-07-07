@@ -56,6 +56,6 @@ An `aws_invoke` call with `{service, operation, input}` flows through `dispatch.
 
 `aws_list_profiles` reads section headers out of `~/.aws/config`/`~/.aws/credentials` (or the paths named by `AWS_CONFIG_FILE`/`AWS_SHARED_CREDENTIALS_FILE`). `aws_use_profile` switches the `Manager`'s active profile, eagerly resolving it first so an unknown or misconfigured profile fails the call immediately rather than on the next `aws_invoke`. Every subsequent `aws_invoke`/`aws_whoami` call uses whichever profile is currently active.
 
-## Adding a service
+## Next: add a service, or browse what's covered
 
-Add one entry to `internal/gen/services/services.json` (`"name": "import/path"`), run `make generate` (regenerates `zz_generated_clients.go`) and `go mod tidy` (fetches the new SDK module). No Go code to write — the new service's operations, schemas, and read-only classification are all derived automatically the next time the catalog is built. See [Services](services.md) for what's currently registered.
+Adding a service is a one-line change, not a new package — see [Services](services.md#adding-a-service) for the exact steps and [Services](services.md) for the full, generated list of what's currently registered.

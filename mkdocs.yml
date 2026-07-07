@@ -49,5 +49,7 @@ nav:
   - Home: index.md
   - Install: install.md
   - Configuration: configuration.md
-  - Architecture: architecture.md
+  - CLI: cli.md
   - Services: services.md
+  - Architecture: architecture.md
+  - Development: development.md

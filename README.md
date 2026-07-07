@@ -2,6 +2,9 @@
 
 [![CI](https://github.com/rangertaha/aws-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/rangertaha/aws-mcp/actions/workflows/ci.yml)
 [![Status: under construction](https://img.shields.io/badge/status-under%20construction-orange)](#-under-construction)
+[![Go Reference](https://pkg.go.dev/badge/github.com/rangertaha/aws-mcp.svg)](https://pkg.go.dev/github.com/rangertaha/aws-mcp)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/rangertaha/aws-mcp)](go.mod)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 <div align="center">
 
@@ -21,7 +24,7 @@ Cursor, and others) can call. Built on the official
 [`aws-sdk-go-v2`](https://github.com/aws/aws-sdk-go-v2). See the
 [**Documentation**](https://rangertaha.github.io/aws-mcp/) for more details.
 
-**In this README**, roughly shallow to deep: [Install](#install) → [Features](#features) → [Configuration](#configuration) → [CLI](#cli) → [Services](#services) → [Architecture](#architecture) → [Development](#development) → [Changelog](#changelog). The [docs site](https://rangertaha.github.io/aws-mcp/) mirrors this same path as separate pages.
+**In this README**, roughly shallow to deep: [Install](#install) → [Features](#features) → [Configuration](#configuration) → [CLI](#cli) → [Services](#services) → [Prompts](#prompts-workflows) → [Architecture](#architecture) → [Development](#development) → [Changelog](#changelog). The [docs site](https://rangertaha.github.io/aws-mcp/) mirrors this same path as separate pages.
 
 Rather than hand-writing a tool per AWS API call, aws-mcp discovers every
 operation on every configured AWS SDK v2 service client via reflection and
@@ -39,6 +42,69 @@ entire AWS API surface — **425 services and 18,765 operations** (see
 | `aws_use_profile`        | Switch the active AWS profile.                                        |
 | `aws_whoami`             | Verify credentials via STS GetCallerIdentity.                          |
 
+## Install
+
+Prebuilt binaries are published on the [latest release](https://github.com/rangertaha/aws-mcp/releases/latest). Download the archive for your platform, extract the `aws` binary, and put it on your `PATH`:
+
+| Platform | Architecture          | Download (latest)                                                                                                            |
+| -------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| macOS    | Apple Silicon (arm64) | [`aws-mcp_darwin_arm64.tar.gz`](https://github.com/rangertaha/aws-mcp/releases/latest/download/aws-mcp_darwin_arm64.tar.gz) |
+| macOS    | Intel (amd64)         | [`aws-mcp_darwin_amd64.tar.gz`](https://github.com/rangertaha/aws-mcp/releases/latest/download/aws-mcp_darwin_amd64.tar.gz) |
+| Linux    | amd64                 | [`aws-mcp_linux_amd64.tar.gz`](https://github.com/rangertaha/aws-mcp/releases/latest/download/aws-mcp_linux_amd64.tar.gz)   |
+| Linux    | arm64                 | [`aws-mcp_linux_arm64.tar.gz`](https://github.com/rangertaha/aws-mcp/releases/latest/download/aws-mcp_linux_arm64.tar.gz)   |
+| Windows  | amd64                 | [`aws-mcp_windows_amd64.zip`](https://github.com/rangertaha/aws-mcp/releases/latest/download/aws-mcp_windows_amd64.zip)     |
+| Windows  | arm64                 | [`aws-mcp_windows_arm64.zip`](https://github.com/rangertaha/aws-mcp/releases/latest/download/aws-mcp_windows_arm64.zip)     |
+
+Each link always resolves to the newest release. A [`checksums.txt`](https://github.com/rangertaha/aws-mcp/releases/latest/download/checksums.txt) is published alongside the archives.
+
+<details>
+<summary><strong>macOS / Linux</strong></summary>
+
+Pick your `OS`/`ARCH`:
+
+```sh
+OS=darwin ARCH=arm64   # OS: darwin|linux   ARCH: amd64|arm64
+curl -sSL "https://github.com/rangertaha/aws-mcp/releases/latest/download/aws-mcp_${OS}_${ARCH}.tar.gz" | tar -xz aws
+sudo mv aws /usr/local/bin/
+aws --version
+```
+
+</details>
+
+<details>
+<summary><strong>Windows (PowerShell)</strong></summary>
+
+Pick your `$Arch`:
+
+```powershell
+$Arch = "amd64"   # ARCH: amd64|arm64
+Invoke-WebRequest "https://github.com/rangertaha/aws-mcp/releases/latest/download/aws-mcp_windows_${Arch}.zip" -OutFile aws.zip
+Expand-Archive aws.zip -DestinationPath .
+.\aws.exe --version
+```
+
+</details>
+
+<details>
+<summary><strong>Install with Go</strong></summary>
+
+```sh
+go install github.com/rangertaha/aws-mcp/cmd/aws@latest
+```
+
+</details>
+
+<details>
+<summary><strong>Build from source</strong></summary>
+
+```sh
+git clone https://github.com/rangertaha/aws-mcp
+cd aws-mcp
+make build        # produces ./bin/aws
+```
+
+</details>
+
 ## Features
 
 - **Generic dispatch**: every operation on every configured service is
@@ -51,27 +117,6 @@ entire AWS API surface — **425 services and 18,765 operations** (see
 - **Read-only switch**: `AWS_READONLY=true` rejects mutating operations at
   call time.
 - **Service filtering**: enable only the services you need with `AWS_TOOLSETS`.
-
-## Install
-
-```sh
-go install github.com/rangertaha/aws-mcp/cmd/aws@latest
-```
-
-Or build from source:
-
-```sh
-git clone https://github.com/rangertaha/aws-mcp
-cd aws-mcp
-make build        # produces ./bin/aws
-```
-
-## CLI
-
-```sh
-aws mcp      # run the MCP server over stdio (default when no subcommand)
-aws test     # verify credentials (STS GetCallerIdentity)
-```
 
 ## Configuration
 
@@ -133,6 +178,14 @@ No Go code to write — the new service's operations, schemas, and read-only cla
 
 </details>
 
+## Prompts (workflows)
+
+MCP clients surface **prompts** as slash commands automatically (e.g. in Claude Code and Claude Desktop). Built-in prompts:
+
+| Prompt | Arguments | What it does |
+| ------ | --------- | ------------ |
+| `survey_bucket` | `bucket` | List an S3 bucket's objects via `aws_invoke` and summarize object count/size |
+
 ## Architecture
 
 <details>
@@ -187,6 +240,8 @@ Or browse interactively with the [MCP Inspector](https://github.com/modelcontext
 ```sh
 npx @modelcontextprotocol/inspector ./bin/aws mcp
 ```
+
+Releases are tag-triggered (GoReleaser via CI); `make next`/`make bump` compute and tag the next version from conventional commits.
 
 </details>
 
