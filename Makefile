@@ -16,7 +16,7 @@ SHELL       := /usr/bin/env bash
 
 .DEFAULT_GOAL := help
 
-.PHONY: help all build install test cover vet fmt fmt-check lint tidy clean run version next bump snapshot
+.PHONY: help all build install test cover vet fmt fmt-check lint tidy generate clean run version next bump snapshot
 
 ## help: show self-documenting target list
 help:
@@ -63,6 +63,10 @@ fmt-check:
 ## tidy: tidy go.mod/go.sum
 tidy:
 	go mod tidy
+
+## generate: regenerate internal/awsx/registry/zz_generated_clients.go from services.json
+generate:
+	go run ./internal/gen/services
 
 ## clean: remove build artifacts
 clean:

@@ -23,7 +23,7 @@ func Register(s *server.Server) {
 			return fmt.Sprintf(`Survey the S3 bucket "%s".
 
 Steps:
-1. Call s3_list_objects (bucket="%s") to list its objects.
+1. Call aws_invoke (service="s3", operation="ListObjectsV2", input={"Bucket": "%s"}) to list its objects.
 2. Report the number of objects returned and the total size.
 3. Group keys by their top-level prefix and summarize what the bucket appears to hold.`,
 				a["bucket"], a["bucket"])

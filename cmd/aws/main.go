@@ -23,7 +23,8 @@ import (
 
 	"github.com/rangertaha/aws-mcp/internal"
 	"github.com/rangertaha/aws-mcp/internal/app"
-	"github.com/rangertaha/aws-mcp/internal/aws"
+	"github.com/rangertaha/aws-mcp/internal/awsx"
+	"github.com/rangertaha/aws-mcp/internal/awsx/registry"
 	"github.com/rangertaha/aws-mcp/internal/config"
 )
 
@@ -102,17 +103,19 @@ func testCommand() *cli.Command {
 			ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 			defer cancel()
 
-			clients, err := aws.NewClients(ctx, cfg.Region)
-			if err != nil {
-				return err
-			}
+			mgr := awsx.NewManager(registry.Factories, cfg.Region, "")
 
-			id, err := aws.Check(ctx, clients)
+			id, err := awsx.Check(ctx, mgr)
 			if err != nil {
 				return fmt.Errorf("verifying AWS credentials: %w", err)
 			}
 
-			fmt.Printf("OK  authenticated with AWS (region=%s)\n", clients.Region)
+			sdkCfg, err := mgr.Config(ctx)
+			if err != nil {
+				return err
+			}
+
+			fmt.Printf("OK  authenticated with AWS (region=%s)\n", sdkCfg.Region)
 			fmt.Printf("    account=%s arn=%s\n", id.Account, id.Arn)
 			fmt.Printf("    read-only=%v\n", cfg.ReadOnly)
 			return nil
