@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"go/format"
+	"go/token"
 	"os"
 	"sort"
 	"strings"
@@ -97,10 +98,16 @@ func loadEntries(servicesPath string) ([]entry, error) {
 
 	entries := make([]entry, 0, len(services))
 	for name, importPath := range services {
-		// The service name doubles as the import alias: it's always a
-		// valid, unique Go identifier by construction (a JSON object key),
-		// and aliasing every import explicitly sidesteps any mismatch
-		// between an import path's last segment and its actual package name.
+		// The service name doubles as the import alias, so it must be a
+		// valid Go identifier — checked explicitly rather than assumed,
+		// since services.json is hand-edited. Without this check, a bad
+		// entry (a hyphen, a leading digit) would only surface much later
+		// as an opaque gofmt parse error out of render(), pointing at
+		// generated source instead of the actual bad entry in
+		// services.json.
+		if !token.IsIdentifier(name) {
+			return nil, fmt.Errorf("%s: %q is not a valid Go identifier, required since it's used as the import alias", servicesPath, name)
+		}
 		entries = append(entries, entry{Name: name, Import: importPath, Alias: name})
 	}
 	sort.Slice(entries, func(i, j int) bool { return entries[i].Name < entries[j].Name })

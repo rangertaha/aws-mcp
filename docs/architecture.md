@@ -54,7 +54,11 @@ An `aws_invoke` call with `{service, operation, input}` flows through `dispatch.
 
 ## Profiles
 
-`aws_list_profiles` reads section headers out of `~/.aws/config`/`~/.aws/credentials` (or the paths named by `AWS_CONFIG_FILE`/`AWS_SHARED_CREDENTIALS_FILE`). `aws_use_profile` switches the `Manager`'s active profile, eagerly resolving it first so an unknown or misconfigured profile fails the call immediately rather than on the next `aws_invoke`. Every subsequent `aws_invoke`/`aws_whoami` call uses whichever profile is currently active.
+`aws_list_profiles` reads section headers out of `~/.aws/config`/`~/.aws/credentials` (or the paths named by `AWS_CONFIG_FILE`/`AWS_SHARED_CREDENTIALS_FILE`). `aws_use_profile` switches the `Manager`'s active profile: it checks the name is one `aws_list_profiles` would discover, and eagerly resolves its static configuration (region, which credential source to use) so a typo'd or structurally invalid profile fails the call immediately rather than on the next `aws_invoke`. It does *not* verify the resulting credentials actually work — `LoadDefaultConfig` only wires up the credential provider chain without invoking it, so a profile with bogus static keys or an unauthenticated/expired SSO session still switches successfully; that failure only surfaces on the first real AWS call. Every subsequent `aws_invoke`/`aws_whoami` call uses whichever profile is currently active.
+
+## Trade-off: binary size
+
+Generic reflection-based dispatch has a real cost: the `aws` binary is around **670MB** uncompressed (~130MB in a released archive) — unusually large for a Go CLI. The cause is specific and measurable, not accidental bloat: `dispatch.Invoke` calls operations via `reflect.Value.Call` using a name resolved at runtime (`in.Operation`), so the Go linker cannot prove any given operation is unreachable and dead-code-eliminate its serializer/deserializer/endpoint-resolution code, the way it would for a hand-written client that only calls the specific operations it names directly. Measured in isolation: a trivial program that only imports `ec2.NewFromConfig` and never calls it links to ~5.6MB; the same program reflectively invoking every EC2 operation (mirroring `dispatch.Invoke`'s pattern) links to ~37MB — before counting the other 425 services. There is no code fix for this within the current design: retaining every operation generically dispatchable *is* the feature.
 
 ## Next: add a service, or browse what's covered
 

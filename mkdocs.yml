@@ -34,7 +34,6 @@ theme:
 markdown_extensions:
   - admonition
   - tables
-  - attr_list
   - toc:
       permalink: true
   - pymdownx.highlight:
@@ -51,5 +50,6 @@ nav:
   - Configuration: configuration.md
   - CLI: cli.md
   - Services: services.md
+  - Prompts: prompts.md
   - Architecture: architecture.md
   - Development: development.md

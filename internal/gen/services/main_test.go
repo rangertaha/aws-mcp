@@ -3,6 +3,7 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -48,6 +49,34 @@ func TestLoadEntriesRejectsMissingFile(t *testing.T) {
 	}
 }
 
+func TestLoadEntriesRejectsInvalidGoIdentifierName(t *testing.T) {
+	cases := []string{
+		"s3-legacy",  // hyphen: not a valid identifier
+		"3dsecure",   // leading digit
+		"my service", // space
+		"",           // empty key (valid JSON, invalid identifier)
+	}
+	for _, name := range cases {
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			path := filepath.Join(dir, "services.json")
+			body, err := json.Marshal(map[string]string{name: "github.com/aws/aws-sdk-go-v2/service/s3"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			writeFile(t, path, string(body))
+
+			_, err = loadEntries(path)
+			if err == nil {
+				t.Fatalf("loadEntries with service name %q: expected an error, got none", name)
+			}
+			if !strings.Contains(err.Error(), "valid Go identifier") {
+				t.Errorf("error = %q, want it to explain the identifier requirement", err.Error())
+			}
+		})
+	}
+}
+
 func TestLoadEntriesRejectsInvalidJSON(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "services.json")
@@ -55,6 +84,25 @@ func TestLoadEntriesRejectsInvalidJSON(t *testing.T) {
 
 	if _, err := loadEntries(path); err == nil {
 		t.Fatal("expected an error for invalid JSON")
+	}
+}
+
+// TestRealServicesJSONLoads guards against a future hand-edit of the real
+// services.json introducing a name that isn't a valid Go identifier — the
+// exact scenario TestLoadEntriesRejectsInvalidGoIdentifierName exercises
+// synthetically, checked here against the actual committed file.
+func TestRealServicesJSONLoads(t *testing.T) {
+	// Tests run with the package directory as cwd, unlike run()'s
+	// defaultServicesPath (which is relative to the repo root for `go run
+	// ./internal/gen/services`) — the file itself lives right alongside
+	// this test.
+	const path = "services.json"
+	entries, err := loadEntries(path)
+	if err != nil {
+		t.Fatalf("loadEntries(%s): %v", path, err)
+	}
+	if len(entries) < 400 {
+		t.Fatalf("loadEntries(%s) = %d entries, want at least 400", path, len(entries))
 	}
 }
 

@@ -154,6 +154,9 @@ type OperationDetail struct {
 }
 
 func (t *tools) describeOperation(_ context.Context, _ *mcp.CallToolRequest, in OperationInput) (*mcp.CallToolResult, OperationDetail, error) {
+	if _, ok := t.cat.Service(in.Service); !ok {
+		return nil, OperationDetail{}, fmt.Errorf("unknown AWS service %q", in.Service)
+	}
 	op, ok := t.cat.Operation(in.Service, in.Operation)
 	if !ok {
 		return nil, OperationDetail{}, fmt.Errorf("unknown AWS operation %s.%s", in.Service, in.Operation)
@@ -186,12 +189,70 @@ func (t *tools) describeOperation(_ context.Context, _ *mcp.CallToolRequest, in 
 // type. IgnoreInvalidTypes covers Unsupported operations too (e.g. streaming
 // bodies), so aws_describe_operation can still document why a field is
 // missing rather than erroring outright.
+//
+// Some AWS types are genuinely self-referential (e.g. wafv2's Statement,
+// which nests itself via And/Or/Not sub-statements; or organizations'
+// HandshakeResource) — jsonschema.ForType has no way to express that as a
+// finite JSON Schema and errors out entirely. encoding/json handles these
+// fine at the data level (real values have finite depth even though the Go
+// type doesn't); only schema *generation* needs an escape hatch, so every
+// type that actually participates in a cycle is pre-identified via
+// reflection and overridden to a generic placeholder schema, breaking the
+// cycle before jsonschema-go's own cycle detection would otherwise error.
 func operationSchema(t reflect.Type) (json.RawMessage, error) {
-	s, err := jsonschema.ForType(t, &jsonschema.ForOptions{IgnoreInvalidTypes: true})
+	opts := &jsonschema.ForOptions{
+		IgnoreInvalidTypes: true,
+		TypeSchemas:        cyclicTypeOverrides(t),
+	}
+	s, err := jsonschema.ForType(t, opts)
 	if err != nil {
 		return nil, err
 	}
 	return json.Marshal(s)
+}
+
+// cyclicTypeOverrides finds every named struct type reachable from t
+// (through pointers, slices, arrays, and maps) that participates in a
+// self-reference — directly or through other types — and returns a schema
+// override for each so jsonschema.ForType treats it as an opaque object
+// instead of trying to expand it indefinitely. Returns nil if t has no
+// cyclic types, so ForOptions.TypeSchemas stays nil (its natural zero value).
+func cyclicTypeOverrides(t reflect.Type) map[reflect.Type]*jsonschema.Schema {
+	cyclic := map[reflect.Type]bool{}
+	findCyclicTypes(t, map[reflect.Type]bool{}, cyclic)
+	if len(cyclic) == 0 {
+		return nil
+	}
+	overrides := make(map[reflect.Type]*jsonschema.Schema, len(cyclic))
+	for ct := range cyclic {
+		overrides[ct] = &jsonschema.Schema{Description: "recursive type (self-referential); see the AWS API reference for its structure"}
+	}
+	return overrides
+}
+
+// findCyclicTypes walks t's type graph (not its values — this is purely
+// structural, so it terminates even though the type itself may recurse
+// indefinitely) via path, the set of named struct types on the current
+// recursion stack. A type reached while already on that stack is added to
+// cyclic.
+func findCyclicTypes(t reflect.Type, path map[reflect.Type]bool, cyclic map[reflect.Type]bool) {
+	for t.Kind() == reflect.Pointer {
+		t = t.Elem()
+	}
+	switch t.Kind() {
+	case reflect.Slice, reflect.Array, reflect.Map:
+		findCyclicTypes(t.Elem(), path, cyclic)
+	case reflect.Struct:
+		if path[t] {
+			cyclic[t] = true
+			return
+		}
+		path[t] = true
+		defer delete(path, t)
+		for i := 0; i < t.NumField(); i++ {
+			findCyclicTypes(t.Field(i).Type, path, cyclic)
+		}
+	}
 }
 
 // InvokeInput names an operation to call and its JSON input.

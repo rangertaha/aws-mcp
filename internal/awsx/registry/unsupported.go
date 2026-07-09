@@ -32,24 +32,53 @@ var (
 // encoding/json can't marshal or unmarshal generically (e.g.
 // dynamodb/types.AttributeValue). It returns whether the operation should be
 // marked Unsupported and, if so, a human-readable reason.
+//
+// Input and output are checked asymmetrically for non-empty interfaces:
+// json.Unmarshal can never populate one (there's no type tag in JSON telling
+// it which concrete type to allocate), so any such field anywhere in the
+// input — including nested inside another struct, e.g.
+// dynamodb.TransactWriteItemsInput's TransactItems[].Put.Item — makes the
+// operation impossible to call generically. json.Marshal, by contrast,
+// always follows an interface field's actual concrete value regardless of
+// its static type, so a populated union/interface field in the output
+// marshals just fine; only genuinely unmarshalable *output* shapes
+// (streaming bodies, open-content documents, channels) make an operation
+// unsupported on the output side.
 func unsupported(input, output reflect.Type) (bool, string) {
-	if reason := unsupportedStruct(input); reason != "" {
+	if reason := unsupportedStruct(input, true, map[reflect.Type]bool{}); reason != "" {
 		return true, "input: " + reason
 	}
-	if reason := unsupportedStruct(output); reason != "" {
+	if reason := unsupportedStruct(output, false, map[reflect.Type]bool{}); reason != "" {
 		return true, "output: " + reason
 	}
 	return false, ""
 }
 
-// unsupportedStruct checks each top-level field of a struct type.
-func unsupportedStruct(t reflect.Type) string {
+// unsupportedStruct checks every exported field of a struct type, recursing
+// into nested structs (guarded by visited against the mutually- and
+// self-referential types common in AWS SDK models, e.g. IAM policy/step
+// function definitions). Since the check is purely a function of a type —
+// never a particular value — a type only needs to be walked once: if it
+// comes up clean here, it's clean everywhere it's reachable from.
+func unsupportedStruct(t reflect.Type, forInput bool, visited map[reflect.Type]bool) string {
 	if t.Kind() != reflect.Struct {
 		return ""
 	}
+	if visited[t] {
+		return ""
+	}
+	visited[t] = true
+
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
-		if reason := unsupportedField(f.Name, f.Type); reason != "" {
+		// Deliberately not filtered to exported-only fields: AWS SDK v2's
+		// event-stream operations (e.g. bedrockruntime's
+		// InvokeModelWithBidirectionalStream) store their genuinely
+		// undispatchable channel plumbing in unexported fields
+		// (eventStream, initialReply, ...) while still using it as the
+		// actual mechanism, so skipping unexported fields would silently
+		// mark those operations as safe to invoke.
+		if reason := unsupportedField(f.Name, f.Type, forInput, visited); reason != "" {
 			return reason
 		}
 	}
@@ -57,24 +86,42 @@ func unsupportedStruct(t reflect.Type) string {
 }
 
 // unsupportedField inspects a single field's type, unwrapping pointer,
-// slice/array, and map container types to find the element kind that
-// actually matters (this is how map[string]types.AttributeValue and
-// []types.SomeUnion get caught, without walking into unrelated nested
-// struct fields).
-func unsupportedField(name string, ft reflect.Type) string {
+// slice/array, and map container types (this is how map[string]types.AttributeValue
+// and []types.SomeUnion get caught) and recursing into nested structs via
+// unsupportedStruct.
+func unsupportedField(name string, ft reflect.Type, forInput bool, visited map[reflect.Type]bool) string {
 	switch ft.Kind() {
 	case reflect.Pointer, reflect.Slice, reflect.Array, reflect.Map:
-		return unsupportedField(name, ft.Elem())
+		return unsupportedField(name, ft.Elem(), forInput, visited)
 	case reflect.Chan:
 		return "field " + name + " is a channel (event-stream)"
 	case reflect.Interface:
 		if ft.NumMethod() == 0 {
 			return "" // empty interface (any): encoding/json handles this natively
 		}
+		// Streaming interfaces (io.Reader/io.ReadCloser on outputs,
+		// io.Reader on inputs) are declared as interface-kind fields in AWS
+		// SDK v2, so this must be checked before the input/output asymmetry
+		// below — unlike a populated union value, a stream can't be
+		// marshaled safely in either direction.
+		if ft.Implements(readerType) || ft.Implements(writerType) {
+			return "field " + name + " is a streaming io.Reader/io.Writer"
+		}
+		if ft.Implements(smithyDocumentMarshalerType) || ft.Implements(smithyDocumentUnmarshalerType) {
+			return "field " + name + " is an open-content smithy document type"
+		}
 		if ft.Implements(jsonMarshalerType) && ft.Implements(jsonUnmarshalerType) {
 			return ""
 		}
+		if !forInput {
+			// A populated union/interface field marshals fine via its
+			// concrete runtime value even without custom (Un)MarshalJSON;
+			// only decoding (input) genuinely can't handle these.
+			return ""
+		}
 		return "field " + name + " is a non-empty interface type (union/polymorphic shape) without JSON support"
+	case reflect.Struct:
+		return unsupportedStruct(ft, forInput, visited)
 	}
 	if ft.Implements(readerType) || ft.Implements(writerType) {
 		return "field " + name + " is a streaming io.Reader/io.Writer"

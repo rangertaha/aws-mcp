@@ -289,6 +289,7 @@
   "partnercentralaccount": "github.com/aws/aws-sdk-go-v2/service/partnercentralaccount",
   "partnercentralbenefits": "github.com/aws/aws-sdk-go-v2/service/partnercentralbenefits",
   "partnercentralchannel": "github.com/aws/aws-sdk-go-v2/service/partnercentralchannel",
+  "partnercentralrevenuemeasurement": "github.com/aws/aws-sdk-go-v2/service/partnercentralrevenuemeasurement",
   "partnercentralselling": "github.com/aws/aws-sdk-go-v2/service/partnercentralselling",
   "paymentcryptography": "github.com/aws/aws-sdk-go-v2/service/paymentcryptography",
   "paymentcryptographydata": "github.com/aws/aws-sdk-go-v2/service/paymentcryptographydata",

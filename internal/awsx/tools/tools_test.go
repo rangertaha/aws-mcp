@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	awssdk "github.com/aws/aws-sdk-go-v2/aws"
@@ -102,6 +103,22 @@ func TestDescribeOperationUnknown(t *testing.T) {
 
 	if _, _, err := svc.describeOperation(context.Background(), nil, OperationInput{Service: "fake", Operation: "NoSuchOp"}); err == nil {
 		t.Fatal("expected an error for an unknown operation")
+	}
+}
+
+// TestDescribeOperationUnknownServiceIsDistinguishedFromUnknownOperation
+// pins down that an unrecognized service name gets its own "unknown AWS
+// service" error, not the generic "unknown AWS operation X.Y" message that
+// would otherwise wrongly suggest the service exists.
+func TestDescribeOperationUnknownServiceIsDistinguishedFromUnknownOperation(t *testing.T) {
+	svc := testTools(false)
+
+	_, _, err := svc.describeOperation(context.Background(), nil, OperationInput{Service: "no-such-service", Operation: "Whatever"})
+	if err == nil {
+		t.Fatal("expected an error for an unknown service")
+	}
+	if !strings.Contains(err.Error(), "unknown AWS service") {
+		t.Errorf(`error = %q, want it to say "unknown AWS service", not "unknown AWS operation"`, err.Error())
 	}
 }
 

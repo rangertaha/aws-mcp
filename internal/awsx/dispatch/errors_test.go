@@ -29,7 +29,7 @@ func TestMapErrorExtractsAPIError(t *testing.T) {
 func TestMapErrorPassesThroughNonAPIError(t *testing.T) {
 	orig := errors.New("network timeout")
 
-	if got := mapError(orig); got != orig {
+	if got := mapError(orig); !errors.Is(got, orig) {
 		t.Fatalf("mapError(%v) = %v, want the original error unchanged", orig, got)
 	}
 }

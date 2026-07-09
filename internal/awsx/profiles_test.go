@@ -80,6 +80,34 @@ func TestListProfilesMissingFilesIsNotAnError(t *testing.T) {
 	}
 }
 
+func TestListProfilesExcludesSSOSessionAndServicesSections(t *testing.T) {
+	withSharedFiles(t, `
+[profile my-sso-profile]
+sso_session = my-sso
+sso_account_id = 123456789012
+sso_role_name = MyRole
+region = us-east-1
+
+[sso-session my-sso]
+sso_region = us-east-1
+sso_start_url = https://my-sso-portal.awsapps.com/start
+sso_registration_scopes = sso:account:access
+
+[services my-services]
+s3 =
+  endpoint_url = https://s3.example.com
+`, "")
+
+	got, err := ListProfiles()
+	if err != nil {
+		t.Fatalf("ListProfiles: %v", err)
+	}
+	want := []string{"my-sso-profile"}
+	if len(got) != len(want) || got[0] != want[0] {
+		t.Fatalf("ListProfiles() = %v, want %v (sso-session/services sections must not appear as profiles)", got, want)
+	}
+}
+
 func TestListProfilesStripsProfilePrefixOnly(t *testing.T) {
 	withSharedFiles(t, `
 [profile a]

@@ -28,6 +28,9 @@ import (
 // server's configured mode, since resources must never mutate state; tool
 // calls pass the server's configured read-only setting.
 func Invoke(ctx context.Context, mgr *awsx.Manager, cat *registry.Catalog, service, operation string, input json.RawMessage, readOnly bool) (json.RawMessage, error) {
+	if _, ok := cat.Service(service); !ok {
+		return nil, fmt.Errorf("unknown AWS service %q", service)
+	}
 	op, ok := cat.Operation(service, operation)
 	if !ok {
 		return nil, fmt.Errorf("unknown operation %s.%s", service, operation)
@@ -56,7 +59,10 @@ func Invoke(ctx context.Context, mgr *awsx.Manager, cat *registry.Catalog, servi
 		return nil, fmt.Errorf("operation %s.%s not found on client", service, operation)
 	}
 
-	results := method.Call([]reflect.Value{reflect.ValueOf(ctx), inPtr})
+	results, err := safeCall(method, ctx, inPtr)
+	if err != nil {
+		return nil, fmt.Errorf("calling %s.%s: %w", service, operation, err)
+	}
 	if errVal, _ := results[1].Interface().(error); errVal != nil {
 		return nil, mapError(errVal)
 	}
@@ -66,4 +72,20 @@ func Invoke(ctx context.Context, mgr *awsx.Manager, cat *registry.Catalog, servi
 		return nil, fmt.Errorf("encoding output for %s.%s: %w", service, operation, err)
 	}
 	return out, nil
+}
+
+// safeCall invokes method(ctx, in), recovering a panic into an error instead
+// of letting it unwind the goroutine. Unlike a hand-written call site,
+// dispatch reflects into whichever of the 18,783 cataloged operations the
+// caller names — an internal AWS SDK v2 bug that panics on some edge-case
+// input (or output shape the generic codec mishandles) must fail only that
+// one call, not crash the whole MCP server and take down every other
+// in-flight or future request with it.
+func safeCall(method reflect.Value, ctx context.Context, in reflect.Value) (results []reflect.Value, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("panic: %v", r)
+		}
+	}()
+	return method.Call([]reflect.Value{reflect.ValueOf(ctx), in}), nil
 }

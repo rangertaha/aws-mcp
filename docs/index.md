@@ -7,8 +7,8 @@ aws-sdk-go-v2.
 Rather than hand-writing a tool per AWS API call, aws-mcp discovers every
 operation on every configured AWS SDK v2 service client via reflection and
 dispatches calls to them generically (see [Architecture](architecture.md)). A
-handful of meta tools cover the entire AWS API surface — currently **425
-services and 18,765 operations** (see [Services](services.md) for the full,
+handful of meta tools cover the entire AWS API surface — currently **426
+services and 18,783 operations** (see [Services](services.md) for the full,
 generated list):
 
 | Tool                     | Purpose                                                              |
@@ -24,6 +24,9 @@ generated list):
 ## Next steps
 
 - [Install](install.md) the server.
-- Set up [Configuration](configuration.md).
-- Read how it works: [Architecture](architecture.md).
+- Set up [Configuration](configuration.md), including your MCP client.
+- Check the [CLI](cli.md) for `aws test`/`aws mcp`.
 - Browse what's covered: [Services](services.md).
+- Try a built-in [Prompt](prompts.md).
+- Read how it works: [Architecture](architecture.md).
+- Contributing? See [Development](development.md).

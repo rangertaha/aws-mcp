@@ -12,13 +12,15 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"log"
 	"reflect"
 
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// Server is the ado-mcp application server.
+// Server is the aws-mcp application server.
 type Server struct {
 	mcp      *mcp.Server
 	readOnly bool
@@ -124,8 +126,37 @@ func Register[In, Out any](s *Server, def ToolDef, h mcp.ToolHandlerFor[In, Out]
 	if sc := normalizedSchema(reflect.TypeFor[Out]()); sc != nil {
 		tool.OutputSchema = sc
 	}
-	mcp.AddTool(s.mcp, tool, h)
+	mcp.AddTool(s.mcp, tool, recoverPanics(def.Name, h))
 	s.registered++
+}
+
+// recoverPanics wraps a tool handler so a panic anywhere in its execution
+// becomes a clean tool error instead of unwinding the goroutine — which,
+// uncaught, would crash the whole MCP server and every other in-flight or
+// future request along with it. Every tool call passes through this one
+// choke point, so it's the right place for a single blanket guard rather
+// than scattering recover() at each call site that happens to reflect over
+// generic/cataloged data today (aws_invoke's dispatch, aws_describe_operation's
+// schema generation) — and it covers any handler added later too.
+//
+// Unlike ordinary tool errors (an expected AWS API failure, a bad input —
+// returned to the client and otherwise left unlogged, matching this
+// codebase's existing convention), a panic means a genuine bug in aws-mcp or
+// the AWS SDK, not routine API behavior. It's logged to stderr (name is set
+// up by app.Assemble) so an operator running the server long-term has any
+// visibility into it at all — otherwise a recovered panic would be
+// completely invisible server-side, surfacing only if a user happened to
+// report the one-off error text they saw.
+func recoverPanics[In, Out any](name string, h mcp.ToolHandlerFor[In, Out]) mcp.ToolHandlerFor[In, Out] {
+	return func(ctx context.Context, req *mcp.CallToolRequest, in In) (result *mcp.CallToolResult, out Out, err error) {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("aws-mcp: recovered panic in tool %q: %v", name, r)
+				err = fmt.Errorf("panic: %v", r)
+			}
+		}()
+		return h(ctx, req, in)
+	}
 }
 
 // rawMessageType is encoding/json.RawMessage, a []byte. Left to the default

@@ -6,7 +6,7 @@ import "strings"
 
 // readPrefixes are operation-name verb prefixes classified as safe/read-only.
 var readPrefixes = []string{
-	"Get", "List", "Describe", "Head", "Query", "Scan", "Search",
+	"Get", "List", "Describe", "Head", "Query", "Scan", "Search", "Filter",
 	"BatchGet", "Lookup", "Check", "Test", "Validate", "Estimate",
 	"Simulate", "Preview", "View",
 }

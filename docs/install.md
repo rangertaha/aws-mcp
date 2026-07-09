@@ -13,6 +13,9 @@ Prebuilt binaries are published on the [latest release](https://github.com/range
 
 Each link always resolves to the newest release. A [`checksums.txt`](https://github.com/rangertaha/aws-mcp/releases/latest/download/checksums.txt) is published alongside the archives.
 
+!!! note "Binary size"
+    The `aws` binary is unusually large for a Go CLI — around **670MB** uncompressed (~130MB in the downloaded archive). This is an inherent consequence of [generic reflection-based dispatch](architecture.md): since any of the 426 services' ~18,700 operations can be invoked dynamically at runtime, the Go linker can't prove any of their serialization/deserialization code is unreachable and dead-code-eliminate it, unlike a hand-written client that only pulls in the specific calls it makes.
+
 ??? example "macOS / Linux"
     Pick your `OS`/`ARCH`:
 

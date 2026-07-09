@@ -39,16 +39,28 @@ func ListProfiles() ([]string, error) {
 	return out, nil
 }
 
-// readSectionNames returns every INI section header in path, with a leading
-// "profile " prefix stripped (the shared config file names non-default
-// profiles "[profile NAME]"; the credentials file and the default profile in
-// either file use a bare "[NAME]").
+// nonProfileSectionPrefixes are shared-config section types that use the
+// same "[type name]" header syntax as a profile but are not themselves
+// profiles: an "[sso-session NAME]" is referenced by a profile's
+// sso_session key, and a "[services NAME]" is referenced by a profile's
+// services key for per-service endpoint overrides. Both are config-file-only
+// constructs (the credentials file holds only bare-named profiles), but
+// excluding them here unconditionally is safe: a credentials-file profile
+// legitimately named exactly "sso-session ..." or "services ..." would be
+// exceedingly unlikely.
+var nonProfileSectionPrefixes = []string{"sso-session ", "services "}
+
+// readSectionNames returns every INI section header in path that names an
+// actual profile, with a leading "profile " prefix stripped (the shared
+// config file names non-default profiles "[profile NAME]"; the credentials
+// file and the default profile in either file use a bare "[NAME]").
+// Non-profile section types (see nonProfileSectionPrefixes) are excluded.
 func readSectionNames(path string) ([]string, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var names []string
 	scanner := bufio.NewScanner(f)
@@ -58,12 +70,24 @@ func readSectionNames(path string) ([]string, error) {
 			continue
 		}
 		name := strings.TrimSpace(line[1 : len(line)-1])
+		if isNonProfileSection(name) {
+			continue
+		}
 		name = strings.TrimPrefix(name, "profile ")
 		if name != "" {
 			names = append(names, name)
 		}
 	}
 	return names, scanner.Err()
+}
+
+func isNonProfileSection(name string) bool {
+	for _, p := range nonProfileSectionPrefixes {
+		if strings.HasPrefix(name, p) {
+			return true
+		}
+	}
+	return false
 }
 
 func configFilePath() string {

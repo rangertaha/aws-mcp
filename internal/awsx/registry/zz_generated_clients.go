@@ -295,6 +295,7 @@ import (
 	partnercentralaccount "github.com/aws/aws-sdk-go-v2/service/partnercentralaccount"
 	partnercentralbenefits "github.com/aws/aws-sdk-go-v2/service/partnercentralbenefits"
 	partnercentralchannel "github.com/aws/aws-sdk-go-v2/service/partnercentralchannel"
+	partnercentralrevenuemeasurement "github.com/aws/aws-sdk-go-v2/service/partnercentralrevenuemeasurement"
 	partnercentralselling "github.com/aws/aws-sdk-go-v2/service/partnercentralselling"
 	paymentcryptography "github.com/aws/aws-sdk-go-v2/service/paymentcryptography"
 	paymentcryptographydata "github.com/aws/aws-sdk-go-v2/service/paymentcryptographydata"
@@ -726,6 +727,7 @@ var Factories = map[string]ClientFactory{
 	"partnercentralaccount":            func(cfg awssdk.Config) any { return partnercentralaccount.NewFromConfig(cfg) },
 	"partnercentralbenefits":           func(cfg awssdk.Config) any { return partnercentralbenefits.NewFromConfig(cfg) },
 	"partnercentralchannel":            func(cfg awssdk.Config) any { return partnercentralchannel.NewFromConfig(cfg) },
+	"partnercentralrevenuemeasurement": func(cfg awssdk.Config) any { return partnercentralrevenuemeasurement.NewFromConfig(cfg) },
 	"partnercentralselling":            func(cfg awssdk.Config) any { return partnercentralselling.NewFromConfig(cfg) },
 	"paymentcryptography":              func(cfg awssdk.Config) any { return paymentcryptography.NewFromConfig(cfg) },
 	"paymentcryptographydata":          func(cfg awssdk.Config) any { return paymentcryptographydata.NewFromConfig(cfg) },

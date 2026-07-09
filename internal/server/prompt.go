@@ -4,6 +4,8 @@ package server
 
 import (
 	"context"
+	"fmt"
+	"log"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -33,7 +35,20 @@ func (s *Server) AddPrompt(name, description string, args []PromptArg, render fu
 	}
 	p := &mcp.Prompt{Name: name, Description: description, Arguments: margs}
 
-	s.mcp.AddPrompt(p, func(_ context.Context, req *mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
+	s.mcp.AddPrompt(p, func(_ context.Context, req *mcp.GetPromptRequest) (result *mcp.GetPromptResult, err error) {
+		// Same reasoning as recoverPanics in server.go: a panic in render
+		// would otherwise unwind uncaught through the MCP SDK's own
+		// request-handling goroutine and crash the whole server, not just
+		// fail this one prompt request. No render function panics today
+		// (survey_bucket's map indexing safely zero-values on a missing
+		// key), but AddPrompt is a general API future prompts use too.
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("aws-mcp: recovered panic in prompt %q: %v", name, r)
+				result, err = nil, fmt.Errorf("panic: %v", r)
+			}
+		}()
+
 		var values map[string]string
 		if req != nil && req.Params != nil {
 			values = req.Params.Arguments

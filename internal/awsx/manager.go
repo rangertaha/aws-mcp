@@ -59,6 +59,18 @@ func (m *Manager) Profile() string {
 func (m *Manager) Config(ctx context.Context) (awssdk.Config, error) {
 	m.mu.RLock()
 	profile := m.profile
+	m.mu.RUnlock()
+	return m.configForProfile(ctx, profile)
+}
+
+// configForProfile returns the resolved config for profile, loading and
+// caching it on first use. Unlike Config, profile is an explicit parameter
+// rather than re-read from m.profile: Client snapshots the active profile
+// once and must stay consistent with that same snapshot even if UseProfile
+// runs concurrently, or a client could be built against one profile's
+// config yet cached under a different (stale) profile's key.
+func (m *Manager) configForProfile(ctx context.Context, profile string) (awssdk.Config, error) {
+	m.mu.RLock()
 	cfg, ok := m.configs[profile]
 	m.mu.RUnlock()
 	if ok {
@@ -89,8 +101,24 @@ func (m *Manager) loadConfig(ctx context.Context, profile string) (awssdk.Config
 	return cfg, nil
 }
 
+// afterProfileSnapshot is a test-only hook, called after Client snapshots
+// the active profile but before resolving its config, so a test can
+// deterministically land a concurrent UseProfile call in that exact window
+// (see TestManagerClientProfileSwitchRace). A no-op in production.
+var afterProfileSnapshot = func() {}
+
 // Client returns the SDK client for the named service (as registered in the
 // factory map), lazily built and cached per active profile.
+//
+// On a cache miss, concurrent callers can each observe the miss and call
+// factory independently before either finishes and populates the cache —
+// the map write itself is safely locked, but the factory call is not
+// serialized against other calls for the same key. This is deliberate: it
+// avoids holding the lock across client construction, at the cost of
+// possible redundant builds under contention (the losers' results are
+// simply discarded). Every registered ClientFactory (zz_generated_clients.go's
+// <service>.NewFromConfig calls) is a pure, side-effect-free constructor, so
+// redundant concurrent calls are wasteful but never incorrect.
 func (m *Manager) Client(ctx context.Context, service string) (any, error) {
 	factory, ok := m.factories[service]
 	if !ok {
@@ -105,7 +133,9 @@ func (m *Manager) Client(ctx context.Context, service string) (any, error) {
 		return client, nil
 	}
 
-	cfg, err := m.Config(ctx)
+	afterProfileSnapshot()
+
+	cfg, err := m.configForProfile(ctx, profile)
 	if err != nil {
 		return nil, err
 	}
@@ -121,9 +151,17 @@ func (m *Manager) Client(ctx context.Context, service string) (any, error) {
 	return client, nil
 }
 
-// UseProfile switches the active profile, eagerly resolving its
-// configuration so an unknown or misconfigured profile fails fast rather than
-// on first use. An empty name reverts to the SDK's default resolution.
+// UseProfile switches the active profile: it checks the name is one of the
+// profiles ListProfiles discovers, and eagerly resolves its static
+// configuration (region, which credential source to use) so a typo'd or
+// structurally invalid profile fails fast rather than on first use. It does
+// NOT verify the resulting credentials actually work — LoadDefaultConfig
+// only wires up the credential provider chain without invoking it, so an
+// otherwise well-formed profile with bogus static keys or an
+// unauthenticated/expired SSO session still switches successfully here; that
+// class of failure only surfaces on the first real AWS call (e.g.
+// aws_whoami), reported as whatever error the credential chain or API
+// returns. An empty name reverts to the SDK's default resolution.
 func (m *Manager) UseProfile(ctx context.Context, profile string) error {
 	if profile != "" {
 		names, err := ListProfiles()

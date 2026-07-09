@@ -9,7 +9,16 @@ import (
 
 // paginationFieldPattern matches the field names AWS SDK v2 operations
 // conventionally use for continuation tokens/markers.
-var paginationFieldPattern = regexp.MustCompile(`(?i)^(NextToken|NextMarker|Marker|PageToken|ExclusiveStartKey|ContinuationToken)$`)
+//
+// DynamoDB's family (LastEvaluatedKey/TableName/GlobalTableName/BackupArn/
+// StreamArn) is its *output* convention for "pass this back to continue";
+// ExclusiveStartKey is the corresponding *input* field name (never an
+// output field itself), kept here defensively in case some operation's
+// output happens to reuse it. Other "LastEvaluated*" fields exist (e.g.
+// ec2's LastEvaluatedTime, ecr's LastEvaluatedAt) but are audit timestamps,
+// not tokens meant to be passed back verbatim, so they're deliberately not
+// matched here.
+var paginationFieldPattern = regexp.MustCompile(`(?i)^(NextToken|NextMarker|Marker|PageToken|ExclusiveStartKey|LastEvaluatedKey|LastEvaluatedTableName|LastEvaluatedGlobalTableName|LastEvaluatedBackupArn|LastEvaluatedStreamArn|ContinuationToken)$`)
 
 // paginationField returns the name of the Output field most likely to carry
 // a pagination token/marker, or "" if none matches the common naming

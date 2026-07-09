@@ -10,7 +10,7 @@ make generate    # regenerate zz_generated_clients.go from services.json
 make all         # fmt-check + vet + lint + test + build
 ```
 
-`internal/awsx/registry` has a sanity test asserting known operations resolve as expected (`s3.ListBuckets`, `ec2.DescribeInstances`, ...); `internal/awsx/dispatch` and `internal/awsx/tools` test the generic invoke/read-only/error-mapping paths against a fake, reflectable client rather than real AWS calls, so the suite never touches a real account.
+`internal/awsx/registry` has a sanity test asserting known operations resolve as expected (`s3.ListBuckets`, `ec2.DescribeInstances`, ...); `internal/awsx/dispatch` and `internal/awsx/tools` test the generic invoke/read-only/error-mapping paths against a fake, reflectable client rather than real AWS calls, so the suite never touches a real account. `cmd/aws` also has an integration test that builds and drives the real binary over its actual stdin/stdout (unlike every other test, which uses an in-memory transport) — it only calls tools that need no credentials, and explicitly strips every `AWS_*` environment variable and disables EC2 IMDS before starting the subprocess, so it stays just as isolated from a real account as the rest of the suite regardless of what's configured on the machine running it.
 
 ## Smoke-testing the protocol
 

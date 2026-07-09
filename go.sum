@@ -604,6 +604,8 @@ github.com/aws/aws-sdk-go-v2/service/partnercentralbenefits v1.2.0 h1:o2tY20LbKT
 github.com/aws/aws-sdk-go-v2/service/partnercentralbenefits v1.2.0/go.mod h1:oAxDdzb1K57Rw1zCt/wDiLOsY+j3SUZoQ1PCWaUOV9k=
 github.com/aws/aws-sdk-go-v2/service/partnercentralchannel v1.3.0 h1:DAOAI2NjvC6lh/RnrWNIL7w5g8ti6LqXtnBEYS8iaIA=
 github.com/aws/aws-sdk-go-v2/service/partnercentralchannel v1.3.0/go.mod h1:v4DpkGbbWSWcrqhIy+58A7w5q/Xrs6YAW+FPXtXuHks=
+github.com/aws/aws-sdk-go-v2/service/partnercentralrevenuemeasurement v1.0.0 h1:FCIVI/vIfzt8Epx+6E0qTzCeVG4NlK7c6ePhfv1O6eg=
+github.com/aws/aws-sdk-go-v2/service/partnercentralrevenuemeasurement v1.0.0/go.mod h1:6uDTPMk195hDduzrvRcL0x9RT9++KU/H7b9gZbzbny8=
 github.com/aws/aws-sdk-go-v2/service/partnercentralselling v1.21.0 h1:h8YF+9Ynbb3u18sa6W79CqtwpgTQw6RQ8jYCXgQEhqQ=
 github.com/aws/aws-sdk-go-v2/service/partnercentralselling v1.21.0/go.mod h1:2AkSKAM3OgOHIbKfqWx/wkIbWNUoF/iZQAD46jtnLWI=
 github.com/aws/aws-sdk-go-v2/service/paymentcryptography v1.32.0 h1:8d+8azT7qWwy4XcX/udE1iFSkcIgEsXY/ET0pj4BwMU=
@@ -900,8 +902,8 @@ github.com/yosida95/uritemplate/v3 v3.0.2 h1:Ed3Oyj9yrmi9087+NczuL5BwkIc4wvTb5zI
 github.com/yosida95/uritemplate/v3 v3.0.2/go.mod h1:ILOh0sOhIJR3+L/8afwt/kE++YT040gmv5BQTMR2HP4=
 golang.org/x/oauth2 v0.35.0 h1:Mv2mzuHuZuY2+bkyWXIHMfhNdJAdwW3FuWeCPYN5GVQ=
 golang.org/x/oauth2 v0.35.0/go.mod h1:lzm5WQJQwKZ3nwavOZ3IS5Aulzxi68dUSgRHujetwEA=
-golang.org/x/sys v0.41.0 h1:Ivj+2Cp/ylzLiEU89QhWblYnOE9zerudt9Ftecq2C6k=
-golang.org/x/sys v0.41.0/go.mod h1:OgkHotnGiDImocRcuBABYBEXf8A9a87e/uXjp9XT3ks=
+golang.org/x/sys v0.44.0 h1:ildZl3J4uzeKP07r2F++Op7E9B29JRUy+a27EibtBTQ=
+golang.org/x/sys v0.44.0/go.mod h1:4GL1E5IUh+htKOUEOaiffhrAeqysfVGipDYzABqnCmw=
 golang.org/x/tools v0.42.0 h1:uNgphsn75Tdz5Ji2q36v/nsFSfR/9BRFvqhGBaJGd5k=
 golang.org/x/tools v0.42.0/go.mod h1:Ma6lCIwGZvHK6XtgbswSoWroEkhugApmsXyrUmBhfr0=
 gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
